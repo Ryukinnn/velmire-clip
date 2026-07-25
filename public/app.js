@@ -1,4 +1,4 @@
-// Velmire Mobile Client Engine by Ryukinnn - 100% Cloud Server Edition
+// Velmire Mobile Client Engine by Ryukinnn - Standard PRO Edition
 document.addEventListener('DOMContentLoaded', () => {
   // DOM Elements
   const ytUrlInput = document.getElementById('ytUrl');
@@ -21,12 +21,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnSaveApi = document.getElementById('btnSaveApi');
   const serverDot = document.getElementById('serverDot');
 
-  // 100% Live Cloud Public Endpoint on Render.com (Hosted 24/7 on Internet)
-  const PUBLIC_CLOUD_URL = 'https://velmire-clip.onrender.com';
+  // Active Production Live Public HTTPS Endpoint
+  const LIVE_CLOUD_URL = 'https://velmire-clip-pro.loca.lt';
 
-  let activeApiUrl = localStorage.getItem('velmire_api_url') || PUBLIC_CLOUD_URL;
+  let activeApiUrl = localStorage.getItem('velmire_api_url') || LIVE_CLOUD_URL;
   if (activeApiUrl.includes('localhost') || activeApiUrl.includes('192.168.')) {
-    activeApiUrl = PUBLIC_CLOUD_URL;
+    activeApiUrl = LIVE_CLOUD_URL;
   }
   apiUrlInput.value = activeApiUrl;
 
@@ -47,12 +47,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Modal Controls
   toggleServerModalBtn.addEventListener('click', () => serverModal.classList.remove('hidden'));
   btnCloseModal.addEventListener('click', () => serverModal.classList.add('hidden'));
-  setWifiIpBtn.addEventListener('click', () => apiUrlInput.value = PUBLIC_CLOUD_URL);
-  setLocalApiBtn.addEventListener('click', () => apiUrlInput.value = PUBLIC_CLOUD_URL);
+  setWifiIpBtn.addEventListener('click', () => apiUrlInput.value = LIVE_CLOUD_URL);
+  setLocalApiBtn.addEventListener('click', () => apiUrlInput.value = LIVE_CLOUD_URL);
 
   btnSaveApi.addEventListener('click', () => {
     let url = apiUrlInput.value.trim();
-    if (!url) url = PUBLIC_CLOUD_URL;
+    if (!url) url = LIVE_CLOUD_URL;
     if (url.endsWith('/')) url = url.slice(0, -1);
     activeApiUrl = url;
     localStorage.setItem('velmire_api_url', activeApiUrl);
@@ -60,10 +60,13 @@ document.addEventListener('DOMContentLoaded', () => {
     checkServerHealth();
   });
 
-  // Check Cloud Connection Health
+  // Check Health Endpoint
   async function checkServerHealth() {
     try {
-      const res = await fetch(`${activeApiUrl}/api/health`, { method: 'GET' });
+      const res = await fetch(`${activeApiUrl}/api/health`, {
+        method: 'GET',
+        headers: { 'bypass-tunnel-reminder': 'true' }
+      });
       if (res.ok) {
         serverDot.classList.add('connected');
       } else {
@@ -100,12 +103,12 @@ document.addEventListener('DOMContentLoaded', () => {
     clipCard.innerHTML = `
       <div class="clip-media" id="media_${clipId}">
         <div style="padding: 40px; text-align: center; color: var(--text-muted);">
-          <div class="spinner" style="font-size: 1.8rem; margin-bottom: 8px;">☁️</div>
-          <div style="font-size: 0.9rem;">Cloud Server sedang memproses video...</div>
+          <div class="spinner" style="font-size: 1.8rem; margin-bottom: 8px;">⏳</div>
+          <div style="font-size: 0.9rem;">Menghubungkan ke server backend...</div>
         </div>
       </div>
       <div class="clip-info-row">
-        <div class="clip-meta">Cloud Server (${numClips} Klip) · Sub: ${subLang.toUpperCase()} · 9:16</div>
+        <div class="clip-meta">${numClips} Klip · Sub: ${subLang.toUpperCase()} · 9:16</div>
         <div class="status-badge sending" id="badge_${clipId}">Menghubungkan</div>
       </div>
       <div id="action_${clipId}"></div>
@@ -116,7 +119,10 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const response = await fetch(`${activeApiUrl}/api/clip`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'bypass-tunnel-reminder': 'true'
+        },
         body: JSON.stringify({
           url: ytUrl,
           platform,
@@ -128,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
-        throw new Error(`Cloud Server 24/7 sedang booting di Render. Mohon tunggu beberapa detik.`);
+        throw new Error(`Server sedang memproses. Silakan tunggu beberapa detik.`);
       }
 
       const data = await response.json();
@@ -148,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (media) {
         media.innerHTML = `
           <div style="padding: 24px; color: #F87171; text-align: center; font-size: 0.88rem; line-height: 1.4;">
-            <div style="font-weight: 700; margin-bottom: 6px;">Status Cloud Server</div>
+            <div style="font-weight: 700; margin-bottom: 6px;">Status Pemrosesan</div>
             ${err.message}
           </div>
         `;
@@ -164,7 +170,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`${baseUrl}/api/status/${jobId}`);
+        const res = await fetch(`${baseUrl}/api/status/${jobId}`, {
+          headers: { 'bypass-tunnel-reminder': 'true' }
+        });
         const contentType = res.headers.get('content-type');
         if (!res.ok || !contentType || !contentType.includes('application/json')) return;
 
