@@ -1,4 +1,4 @@
-// Velmire Mobile Client Engine by Ryukinnn - Cloud Edition
+// Velmire Mobile Client Engine by Ryukinnn - Auto Multi-Backend Engine
 document.addEventListener('DOMContentLoaded', () => {
   // DOM Elements
   const ytUrlInput = document.getElementById('ytUrl');
@@ -23,12 +23,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnSaveApi = document.getElementById('btnSaveApi');
   const serverDot = document.getElementById('serverDot');
 
-  const CLOUD_ENDPOINTS = [
+  // Candidate Backend Endpoints (Cloud + Wi-Fi Auto Failover)
+  const CANDIDATE_ENDPOINTS = [
     'https://velmire-clip.onrender.com',
-    'https://ryukinnn-velmire-clip.hf.space'
+    'https://ryukinnn-velmire-clip.hf.space',
+    'http://192.168.1.14:3000',
+    'https://velmire-clip-pro.loca.lt'
   ];
 
-  let activeApiUrl = localStorage.getItem('velmire_api_url') || CLOUD_ENDPOINTS[0];
+  let activeApiUrl = localStorage.getItem('velmire_api_url') || CANDIDATE_ENDPOINTS[0];
   apiUrlInput.value = activeApiUrl;
 
   // Clipboard Paste Handler
@@ -54,8 +57,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnCloseModal.addEventListener('click', () => serverModal.classList.add('hidden'));
 
-  presetRenderBtn.addEventListener('click', () => apiUrlInput.value = CLOUD_ENDPOINTS[0]);
-  presetHuggingFaceBtn.addEventListener('click', () => apiUrlInput.value = CLOUD_ENDPOINTS[1]);
+  if (presetRenderBtn) presetRenderBtn.addEventListener('click', () => apiUrlInput.value = CANDIDATE_ENDPOINTS[0]);
+  if (presetHuggingFaceBtn) presetHuggingFaceBtn.addEventListener('click', () => apiUrlInput.value = CANDIDATE_ENDPOINTS[1]);
 
   presetTestConnectionBtn.addEventListener('click', async () => {
     let url = apiUrlInput.value.trim();
@@ -71,19 +74,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = await res.json();
         testConnectionStatus.style.color = '#34D399';
         testConnectionStatus.textContent = `✅ Server Online! (${data.developer || 'Ryukinnn'})`;
+        serverDot.classList.add('connected');
       } else {
         testConnectionStatus.style.color = '#F87171';
-        testConnectionStatus.textContent = `⚠️ Server offline atau sedang diproses (HTTP ${res.status}).`;
+        testConnectionStatus.textContent = `⚠️ Server offline (HTTP ${res.status}).`;
       }
     } catch (e) {
       testConnectionStatus.style.color = '#F87171';
-      testConnectionStatus.textContent = '❌ Tidak dapat terhubung ke server cloud tersebut.';
+      testConnectionStatus.textContent = '❌ Tidak dapat terhubung ke server.';
     }
   });
 
   btnSaveApi.addEventListener('click', () => {
     let url = apiUrlInput.value.trim();
-    if (!url) url = CLOUD_ENDPOINTS[0];
+    if (!url) url = CANDIDATE_ENDPOINTS[0];
     if (url.endsWith('/')) url = url.slice(0, -1);
     activeApiUrl = url;
     localStorage.setItem('velmire_api_url', activeApiUrl);
@@ -91,10 +95,34 @@ document.addEventListener('DOMContentLoaded', () => {
     checkServerHealth();
   });
 
+  // Auto-Resolve Active Working Backend Endpoint
+  async function resolveWorkingBackend() {
+    // Check saved URL first
+    try {
+      const res = await fetch(`${activeApiUrl}/api/health`, { method: 'GET' });
+      if (res.ok) return activeApiUrl;
+    } catch (e) {}
+
+    // Iterate candidates
+    for (const ep of CANDIDATE_ENDPOINTS) {
+      try {
+        const res = await fetch(`${ep}/api/health`, { method: 'GET' });
+        if (res.ok) {
+          activeApiUrl = ep;
+          localStorage.setItem('velmire_api_url', activeApiUrl);
+          apiUrlInput.value = activeApiUrl;
+          return activeApiUrl;
+        }
+      } catch (e) {}
+    }
+    return activeApiUrl;
+  }
+
   // Check Health
   async function checkServerHealth() {
     try {
-      const res = await fetch(`${activeApiUrl}/api/health`, { method: 'GET' });
+      const liveUrl = await resolveWorkingBackend();
+      const res = await fetch(`${liveUrl}/api/health`, { method: 'GET' });
       if (res.ok) {
         serverDot.classList.add('connected');
       } else {
@@ -132,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="clip-media" id="media_${clipId}">
         <div style="padding: 40px; text-align: center; color: var(--text-muted);">
           <div class="spinner" style="font-size: 1.8rem; margin-bottom: 8px;">⏳</div>
-          <div style="font-size: 0.9rem;">Menghubungkan ke Cloud Server...</div>
+          <div style="font-size: 0.9rem;">Menghubungkan ke Server Backend...</div>
         </div>
       </div>
       <div class="clip-info-row">
@@ -145,7 +173,9 @@ document.addEventListener('DOMContentLoaded', () => {
     queueList.prepend(clipCard);
 
     try {
-      const response = await fetch(`${activeApiUrl}/api/clip`, {
+      const targetBackend = await resolveWorkingBackend();
+
+      const response = await fetch(`${targetBackend}/api/clip`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -159,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
-        throw new Error(`Server Cloud sedang memuat. Jika baru diaktifkan di Render/HuggingFace, tunggu 30 detik lalu coba lagi.`);
+        throw new Error(`Server backend sedang menyiapkan koneksi. Silakan coba kembali dalam beberapa detik.`);
       }
 
       const data = await response.json();
@@ -167,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
         throw new Error(data.error || 'Gagal memproses pemotongan video.');
       }
 
-      pollJobStatus(data.jobId, clipId, activeApiUrl);
+      pollJobStatus(data.jobId, clipId, targetBackend);
     } catch (err) {
       console.error(err);
       const badge = document.getElementById(`badge_${clipId}`);
@@ -179,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (media) {
         media.innerHTML = `
           <div style="padding: 24px; color: #F87171; text-align: center; font-size: 0.88rem; line-height: 1.4;">
-            <div style="font-weight: 700; margin-bottom: 6px;">Koneksi Cloud Server</div>
+            <div style="font-weight: 700; margin-bottom: 6px;">Status Pemrosesan Video</div>
             ${err.message}
           </div>
         `;
