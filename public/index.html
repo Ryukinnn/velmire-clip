@@ -131,18 +131,19 @@
       </div>
       <div class="modal-body">
         <p class="modal-desc">
-          Masukkan URL Server Cloud 24/7 publik Anda:
+          URL Server Cloud 24/7 Publik:
         </p>
         <div class="input-group">
           <label for="apiUrlInput">URL Endpoint Server Cloud</label>
           <input type="text" id="apiUrlInput" placeholder="https://...">
         </div>
         <div class="preset-buttons">
-          <button type="button" class="btn-chip" id="presetRender">Server Cloud Render (https://velmire-clip.onrender.com)</button>
-          <button type="button" class="btn-chip" id="presetHuggingFace">Server Cloud HuggingFace (https://ryukinnn-velmire-clip.hf.space)</button>
+          <button type="button" class="btn-chip" id="presetRender">Server Cloud Render (velmire-clip.onrender.com)</button>
+          <button type="button" class="btn-chip" id="presetHuggingFace">Server Cloud HuggingFace (ryukinnn-velmire-clip.hf.space)</button>
+          <button type="button" class="btn-chip" id="presetAutoFind">⚡ Cari & Hubungkan Server Aktif Otomatis</button>
           <button type="button" class="btn-chip" id="presetTestConnection">🔍 Tes Koneksi Server</button>
         </div>
-        <div id="testConnectionStatus" style="font-size: 0.82rem; margin-top: 6px; font-family: var(--font-mono);"></div>
+        <div id="testConnectionStatus" style="font-size: 0.82rem; margin-top: 6px; font-family: var(--font-mono); line-height: 1.4;"></div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn-secondary" id="btnSaveApi">Simpan & Hubungkan</button>

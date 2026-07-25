@@ -18,17 +18,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const apiUrlInput = document.getElementById('apiUrlInput');
   const presetRenderBtn = document.getElementById('presetRender');
   const presetHuggingFaceBtn = document.getElementById('presetHuggingFace');
+  const presetAutoFindBtn = document.getElementById('presetAutoFind');
   const presetTestConnectionBtn = document.getElementById('presetTestConnection');
   const testConnectionStatus = document.getElementById('testConnectionStatus');
   const btnSaveApi = document.getElementById('btnSaveApi');
   const serverDot = document.getElementById('serverDot');
 
-  // Candidate Backend Endpoints (Cloud + Wi-Fi Auto Failover)
   const CANDIDATE_ENDPOINTS = [
     'https://velmire-clip.onrender.com',
     'https://ryukinnn-velmire-clip.hf.space',
-    'http://192.168.1.14:3000',
-    'https://velmire-clip-pro.loca.lt'
+    'http://192.168.1.14:3000'
   ];
 
   let activeApiUrl = localStorage.getItem('velmire_api_url') || CANDIDATE_ENDPOINTS[0];
@@ -60,6 +59,37 @@ document.addEventListener('DOMContentLoaded', () => {
   if (presetRenderBtn) presetRenderBtn.addEventListener('click', () => apiUrlInput.value = CANDIDATE_ENDPOINTS[0]);
   if (presetHuggingFaceBtn) presetHuggingFaceBtn.addEventListener('click', () => apiUrlInput.value = CANDIDATE_ENDPOINTS[1]);
 
+  if (presetAutoFindBtn) {
+    presetAutoFindBtn.addEventListener('click', async () => {
+      testConnectionStatus.style.color = 'var(--text-muted)';
+      testConnectionStatus.textContent = '⚡ Memindai semua server cloud aktif...';
+
+      let found = null;
+      for (const ep of CANDIDATE_ENDPOINTS) {
+        try {
+          const res = await fetch(`${ep}/api/health`, { method: 'GET' });
+          if (res.ok) {
+            found = ep;
+            break;
+          }
+        } catch (e) {}
+      }
+
+      if (found) {
+        activeApiUrl = found;
+        apiUrlInput.value = activeApiUrl;
+        localStorage.setItem('velmire_api_url', activeApiUrl);
+        testConnectionStatus.style.color = '#34D399';
+        testConnectionStatus.textContent = `✅ Server Aktif Ditemukan: ${found}`;
+        serverDot.classList.add('connected');
+      } else {
+        testConnectionStatus.style.color = '#F87171';
+        testConnectionStatus.textContent = `⚠️ Belum ada server cloud yang aktif. Klik 1-Click Deploy pada repository GitHub Anda.`;
+        serverDot.classList.remove('connected');
+      }
+    });
+  }
+
   presetTestConnectionBtn.addEventListener('click', async () => {
     let url = apiUrlInput.value.trim();
     if (!url) return;
@@ -73,15 +103,17 @@ document.addEventListener('DOMContentLoaded', () => {
       if (res.ok) {
         const data = await res.json();
         testConnectionStatus.style.color = '#34D399';
-        testConnectionStatus.textContent = `✅ Server Online! (${data.developer || 'Ryukinnn'})`;
+        testConnectionStatus.textContent = `✅ Server Cloud Online! (${data.developer || 'Ryukinnn'})`;
         serverDot.classList.add('connected');
       } else {
         testConnectionStatus.style.color = '#F87171';
-        testConnectionStatus.textContent = `⚠️ Server offline (HTTP ${res.status}).`;
+        testConnectionStatus.textContent = `⚠️ Server HTTP ${res.status}. Membutuhkan 1-Click Deploy di Render / HuggingFace.`;
+        serverDot.classList.remove('connected');
       }
     } catch (e) {
       testConnectionStatus.style.color = '#F87171';
-      testConnectionStatus.textContent = '❌ Tidak dapat terhubung ke server.';
+      testConnectionStatus.textContent = '❌ Tidak dapat terhubung (Server Offline/404). Aktivasi Cloud Server 1-Click diperlukan.';
+      serverDot.classList.remove('connected');
     }
   });
 
@@ -97,13 +129,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Auto-Resolve Active Working Backend Endpoint
   async function resolveWorkingBackend() {
-    // Check saved URL first
     try {
       const res = await fetch(`${activeApiUrl}/api/health`, { method: 'GET' });
       if (res.ok) return activeApiUrl;
     } catch (e) {}
 
-    // Iterate candidates
     for (const ep of CANDIDATE_ENDPOINTS) {
       try {
         const res = await fetch(`${ep}/api/health`, { method: 'GET' });
@@ -189,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
-        throw new Error(`Server backend sedang menyiapkan koneksi. Silakan coba kembali dalam beberapa detik.`);
+        throw new Error(`Server Cloud belum aktif (404). Silakan lakukan 1-Click Deploy pada repository GitHub Anda.`);
       }
 
       const data = await response.json();
