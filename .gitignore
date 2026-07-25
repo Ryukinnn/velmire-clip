@@ -1,0 +1,8 @@
+node_modules/
+temp/
+output/
+temp_frames/
+android/app/build/
+android/.gradle/
+*.apk
+*.mp4

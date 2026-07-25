@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Velmire — Video Clipper & Subtitle Engine by Ryukinnn</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <meta name="theme-color" content="#0B0F17">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand-logo">
+        <div class="logo-mark">V</div>
+        <div class="brand-title-wrap">
+          <div class="brand-top-row">
+            <span class="brand-name">VELMIRE</span>
+            <span class="version-tag">v2.4 PRO</span>
+          </div>
+          <span class="developer-tag">Developed by Ryukinnn</span>
+        </div>
+      </div>
+      <button class="btn-settings" id="toggleServerModal" title="Pengaturan Server">
+        <span class="server-status-dot" id="serverDot"></span>
+        <span class="settings-icon">⚙️</span>
+      </button>
+    </header>
+
+    <!-- Subtitle Intro -->
+    <div class="hero-intro">
+      <p class="subtitle">Potong video YouTube otomatis ke format Shorts/Reels 9:16 lengkap dengan subtitle berbagai bahasa.</p>
+    </div>
+
+    <!-- Main Form -->
+    <main class="form-card">
+      <!-- YouTube Link Input -->
+      <div class="input-group">
+        <label for="ytUrl">Tautan Video YouTube</label>
+        <div class="input-with-button">
+          <input type="text" id="ytUrl" placeholder="https://youtu.be/..." autocomplete="off">
+          <button type="button" class="btn-paste" id="btnPaste">Tempel</button>
+        </div>
+      </div>
+
+      <!-- Target Platform Selector -->
+      <div class="input-group full">
+        <label for="platformSelect">Format Output Video</label>
+        <select id="platformSelect" class="custom-select">
+          <option value="shorts">Shorts & Reels (9:16 - Vertikal)</option>
+          <option value="tiktok">TikTok Video (9:16 - Vertikal)</option>
+          <option value="wa_story">WhatsApp Status (9:16 - Vertikal)</option>
+          <option value="climax">Durasi Penuh Climax (45 - 60 Detik)</option>
+        </select>
+      </div>
+
+      <!-- Multi-Language Subtitle Selector -->
+      <div class="input-group full">
+        <label for="subLangSelect">Bahasa Subtitle Video</label>
+        <select id="subLangSelect" class="custom-select">
+          <option value="id">🇮🇩 Bahasa Indonesia</option>
+          <option value="en">🇺🇸 English (US/UK)</option>
+          <option value="ja">🇯🇵 Japanese (日本語)</option>
+          <option value="ko">🇰🇷 Korean (한국어)</option>
+          <option value="es">🇪🇸 Spanish (Español)</option>
+          <option value="fr">🇫🇷 French (Français)</option>
+          <option value="de">🇩🇪 German (Deutsch)</option>
+          <option value="ar">🇸🇦 Arabic (العربية)</option>
+          <option value="zh-Hans">🇨🇳 Chinese Mandarin (中文)</option>
+          <option value="ru">🇷🇺 Russian (Русский)</option>
+          <option value="pt">🇧🇷 Portuguese (Português)</option>
+          <option value="hi">🇮🇳 Hindi (हिन्दी)</option>
+          <option value="auto">🌐 Otomatis (Bahasa Asli Video)</option>
+        </select>
+      </div>
+
+      <!-- Options Row -->
+      <div class="options-row">
+        <div class="input-group full">
+          <label for="numClipsSelect">Jumlah Hasil Potongan</label>
+          <select id="numClipsSelect" class="custom-select">
+            <option value="1">1 Klip Utama (Kualitas Terbaik)</option>
+            <option value="3">3 Klip Highlight Sekaligus</option>
+          </select>
+        </div>
+
+        <div class="input-group full">
+          <label for="subtitleStyle">Desain Teks Subtitle</label>
+          <select id="subtitleStyle" class="custom-select">
+            <option value="auto">Teks Putih + Outine Hitam (Standar PRO)</option>
+            <option value="highlight">Teks Kuning Highlight</option>
+            <option value="none">Tanpa Subtitle</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <button type="button" id="btnCreateClip" class="btn-primary">
+        <span class="btn-text">Mulai Pemrosesan Video</span>
+      </button>
+    </main>
+
+    <!-- Queue Section -->
+    <section class="queue-section">
+      <h2 class="section-title">Antrian Pemrosesan Klip</h2>
+      <div id="queueList" class="queue-list">
+        <div class="empty-queue-placeholder" id="emptyPlaceholder">
+          <p>Belum ada video dalam antrian. Masukkan tautan YouTube dan klik <strong>Mulai Pemrosesan Video</strong>.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>Velmire Engine v2.4 — Developed by <strong>Ryukinnn</strong></p>
+    </footer>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-backdrop hidden" id="serverModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Pengaturan Server Backend</h3>
+        <button class="btn-close" id="btnCloseModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">
+          Alamat Server Backend Aktif:
+        </p>
+        <div class="input-group">
+          <label for="apiUrlInput">URL Endpoint Server</label>
+          <input type="text" id="apiUrlInput" placeholder="https://...">
+        </div>
+        <div class="preset-buttons">
+          <button type="button" class="btn-chip" id="setWifiIp">Gunakan Cloud Server Auto</button>
+          <button type="button" class="btn-chip" id="setLocalApi">Gunakan IP Komputer (192.168.1.14:3000)</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="btnSaveApi">Simpan Pengaturan</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
