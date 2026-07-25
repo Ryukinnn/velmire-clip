@@ -27,7 +27,7 @@
           <span class="developer-tag">Developed by Ryukinnn</span>
         </div>
       </div>
-      <button class="btn-settings" id="toggleServerModal" title="Pengaturan Server">
+      <button class="btn-settings" id="toggleServerModal" title="Pengaturan Server Cloud">
         <span class="server-status-dot" id="serverDot"></span>
         <span class="settings-icon">⚙️</span>
       </button>
@@ -122,28 +122,30 @@
     </footer>
   </div>
 
-  <!-- Settings Modal -->
+  <!-- Settings Modal for Cloud Server -->
   <div class="modal-backdrop hidden" id="serverModal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3>Pengaturan Server Backend</h3>
+        <h3>Pengaturan Server Cloud Backend</h3>
         <button class="btn-close" id="btnCloseModal">&times;</button>
       </div>
       <div class="modal-body">
         <p class="modal-desc">
-          Alamat Server Backend Aktif:
+          Masukkan URL Server Cloud 24/7 publik Anda:
         </p>
         <div class="input-group">
-          <label for="apiUrlInput">URL Endpoint Server</label>
+          <label for="apiUrlInput">URL Endpoint Server Cloud</label>
           <input type="text" id="apiUrlInput" placeholder="https://...">
         </div>
         <div class="preset-buttons">
-          <button type="button" class="btn-chip" id="setWifiIp">Gunakan Cloud Server Auto</button>
-          <button type="button" class="btn-chip" id="setLocalApi">Gunakan IP Komputer (192.168.1.14:3000)</button>
+          <button type="button" class="btn-chip" id="presetRender">Server Cloud Render (https://velmire-clip.onrender.com)</button>
+          <button type="button" class="btn-chip" id="presetHuggingFace">Server Cloud HuggingFace (https://ryukinnn-velmire-clip.hf.space)</button>
+          <button type="button" class="btn-chip" id="presetTestConnection">🔍 Tes Koneksi Server</button>
         </div>
+        <div id="testConnectionStatus" style="font-size: 0.82rem; margin-top: 6px; font-family: var(--font-mono);"></div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn-secondary" id="btnSaveApi">Simpan Pengaturan</button>
+        <button type="button" class="btn-secondary" id="btnSaveApi">Simpan & Hubungkan</button>
       </div>
     </div>
   </div>
