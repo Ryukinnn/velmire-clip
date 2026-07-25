@@ -7,7 +7,6 @@ const { exec } = require('child_process');
 const { v4: uuidv4 } = require('uuid');
 const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
 const fluentFfmpeg = require('fluent-ffmpeg');
-const localtunnel = require('localtunnel');
 
 // Set FFmpeg Path
 fluentFfmpeg.setFfmpegPath(ffmpegInstaller.path);
@@ -15,7 +14,6 @@ const FFMPEG_BIN = ffmpegInstaller.path;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const PUBLIC_SUBDOMAIN = process.env.SUBDOMAIN || 'velmire-clip-pro';
 
 // Middleware
 app.use(cors());
@@ -25,6 +23,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use((req, res, next) => {
   res.setHeader('bypass-tunnel-reminder', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, bypass-tunnel-reminder');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
 
@@ -39,6 +40,16 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/output', express.static(outputDir));
 
 const jobs = {};
+
+// Periodic Cleanup for Old Jobs (Every 30 minutes)
+setInterval(() => {
+  const now = Date.now();
+  for (const id in jobs) {
+    if (now - new Date(jobs[id].createdAt).getTime() > 2 * 60 * 60 * 1000) {
+      delete jobs[id];
+    }
+  }
+}, 30 * 60 * 1000);
 
 function getLocalIpAddresses() {
   const interfaces = os.networkInterfaces();
@@ -150,7 +161,7 @@ function analyzeFypHighlights(subtitles, totalDurationSec, targetClipDurationSec
   return windows;
 }
 
-// Health Check
+// Health Check Endpoint
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -251,13 +262,17 @@ async function processAutoFypJob(jobId, options) {
     });
 
     let targetVttFile = null;
-    const files = fs.readdirSync(tempDir);
-    for (const f of files) {
-      if (f.startsWith(`sub_${jobId}`) && f.endsWith('.vtt')) {
-        if (f.includes(`.${subLang}.`) || !targetVttFile) {
-          targetVttFile = path.join(tempDir, f);
+    try {
+      const files = fs.readdirSync(tempDir);
+      for (const f of files) {
+        if (f.startsWith(`sub_${jobId}`) && f.endsWith('.vtt')) {
+          if (f.includes(`.${subLang}.`) || !targetVttFile) {
+            targetVttFile = path.join(tempDir, f);
+          }
         }
       }
+    } catch (e) {
+      console.warn('Temp dir read warning:', e);
     }
 
     const parsedSubtitles = parseVttSubtitles(targetVttFile);
@@ -279,12 +294,22 @@ async function processAutoFypJob(jobId, options) {
       const clipFilename = `clip_${subLang}_${jobId.slice(0, 6)}_${i + 1}.mp4`;
       const clipOutputPath = path.join(outputDir, clipFilename);
 
-      let filterComplex = 'crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=720:1280';
+      // Even dimensions crop filter to prevent H.264 codec crashes
+      let filterComplex = 'crop=w=trunc(ih*9/16/2)*2:h=trunc(ih/2)*2:x=trunc((iw-ih*9/16)/2/2)*2:y=0,scale=720:1280';
 
       if (subtitleStyle !== 'none') {
         const segSubs = parsedSubtitles.filter(s => s.startSec >= hl.startSec && s.startSec <= hl.endSec);
-        let sampleText = segSubs.length > 0 ? segSubs[0].text : (i === 0 ? '🔥 HIGHLIGHT KLIP' : `HIGHLIGHT #${i+1}`);
-        sampleText = sampleText.replace(/'/g, '').replace(/:/g, ' - ').slice(0, 40);
+        let sampleText = segSubs.length > 0 ? segSubs[0].text : (i === 0 ? 'HIGHLIGHT KLIP' : `HIGHLIGHT #${i+1}`);
+        
+        // Strict text sanitization for FFmpeg drawtext
+        sampleText = sampleText
+          .replace(/\\/g, '/')
+          .replace(/'/g, '')
+          .replace(/:/g, ' - ')
+          .replace(/%/g, 'pct')
+          .replace(/\[/g, '(')
+          .replace(/\]/g, ')')
+          .slice(0, 40);
 
         filterComplex += `,drawtext=text='${sampleText}':fontcolor=white:fontsize=36:box=1:boxcolor=black@0.6:boxborderw=10:x=(w-text_w)/2:y=h-th-80`;
       }
@@ -322,9 +347,15 @@ async function processAutoFypJob(jobId, options) {
       });
     }
 
-    if (fs.existsSync(rawVideoPath)) fs.unlinkSync(rawVideoPath);
-    for (const f of files) {
-      if (f.startsWith(`sub_${jobId}`)) fs.unlinkSync(path.join(tempDir, f));
+    // Cleanup raw files
+    try {
+      if (fs.existsSync(rawVideoPath)) fs.unlinkSync(rawVideoPath);
+      const files = fs.readdirSync(tempDir);
+      for (const f of files) {
+        if (f.startsWith(`sub_${jobId}`)) fs.unlinkSync(path.join(tempDir, f));
+      }
+    } catch (e) {
+      console.warn('File cleanup warning:', e);
     }
 
     job.status = 'selesai';
@@ -339,22 +370,15 @@ async function processAutoFypJob(jobId, options) {
     job.status = 'failed';
     job.statusMessage = 'Gagal';
     job.error = err.message;
-    if (fs.existsSync(rawVideoPath)) fs.unlinkSync(rawVideoPath);
+    try {
+      if (fs.existsSync(rawVideoPath)) fs.unlinkSync(rawVideoPath);
+    } catch (e) {}
   }
 }
 
-// Start Server & Localtunnel
-app.listen(PORT, '0.0.0.0', async () => {
+// Start Server
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`=================================================`);
-  console.log(`⚡ Velmire Server by Ryukinnn running!`);
-  console.log(`   Port: ${PORT}`);
-  console.log(`   Local Wi-Fi: http://192.168.1.14:${PORT}`);
-
-  try {
-    const tunnel = await localtunnel({ port: PORT, subdomain: PUBLIC_SUBDOMAIN });
-    console.log(`🌐 Public Live HTTPS URL: ${tunnel.url}`);
-    console.log(`=================================================`);
-  } catch (err) {
-    console.warn('Localtunnel start warning:', err.message);
-  }
+  console.log(`⚡ Velmire Server by Ryukinnn running! Port: ${PORT}`);
+  console.log(`=================================================`);
 });
