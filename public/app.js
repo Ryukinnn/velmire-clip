@@ -1,4 +1,4 @@
-// Velmire Mobile Client Engine by Ryukinnn - 100% Cloud Hosting (Zero PC Running)
+// Velmire Mobile Client Engine by Ryukinnn - 100% Cloud Server Edition
 document.addEventListener('DOMContentLoaded', () => {
   // DOM Elements
   const ytUrlInput = document.getElementById('ytUrl');
@@ -21,8 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnSaveApi = document.getElementById('btnSaveApi');
   const serverDot = document.getElementById('serverDot');
 
-  // 100% Free Public Cloud Server Endpoint (Render / HuggingFace Spaces)
-  const PUBLIC_CLOUD_URL = 'https://velmire-clip-ai.onrender.com';
+  // 100% Live Cloud Public Endpoint on Render.com (Hosted 24/7 on Internet)
+  const PUBLIC_CLOUD_URL = 'https://velmire-clip.onrender.com';
 
   let activeApiUrl = localStorage.getItem('velmire_api_url') || PUBLIC_CLOUD_URL;
   if (activeApiUrl.includes('localhost') || activeApiUrl.includes('192.168.')) {
@@ -128,12 +128,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
-        throw new Error(`Cloud Server 24/7 sedang online. Jika baru dijalankan di Render/HuggingFace, tunggu 30 detik untuk booting.`);
+        throw new Error(`Cloud Server 24/7 sedang booting di Render. Mohon tunggu beberapa detik.`);
       }
 
       const data = await response.json();
       if (!response.ok || !data.jobId) {
-        throw new Error(data.error || 'Gagal memproses pemotongan video di Cloud.');
+        throw new Error(data.error || 'Gagal memproses pemotongan video.');
       }
 
       pollJobStatus(data.jobId, clipId, activeApiUrl);

@@ -1,0 +1,9 @@
+{
+  "appId": "com.velmire.clip",
+  "appName": "Velmire Clip",
+  "webDir": "public",
+  "server": {
+    "androidScheme": "http",
+    "cleartext": true
+  }
+}
